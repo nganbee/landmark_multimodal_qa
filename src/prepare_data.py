@@ -21,7 +21,7 @@ DATA_DIR = ROOT_DIR / 'data'
 CSV_TRAIN = DATA_DIR / 'raw' / 'train.csv'
 CSV_CATEGORY = DATA_DIR / 'raw' / 'train_label_to_hierarchical.csv'
 DATASET_DIR = DATA_DIR / 'landmark_dataset'
-JSONL_OUTPUT = DATA_DIR / 'processed' / 'train.jsonl'
+JSONL_OUTPUT = DATA_DIR / 'train.jsonl'
 
 NUM_LABELS = 300
 NUM_IMG = 20
@@ -163,10 +163,12 @@ def create_qa_pair(image_path, landmark_name):
     answer = f"Based on the visual features, this is {landmark_name}."
     
     format_qa = {
+        "image": image_path, 
+        
         "messages": [
             {"role": "system", "content": [{"type": "text", "text": "You are a highly capable AI assistant specialized in identifying global landmarks."}]},
             {"role": "user", "content": [
-                {"type": "image", "image": image_path},
+                {"type": "image"}, 
                 {"type": "text", "text": question}
             ]},
             {"role": "assistant", "content": [
@@ -178,6 +180,8 @@ def create_qa_pair(image_path, landmark_name):
     
 def create_model_dataset(df, file_output, dataset_dir):
     id_to_name = dict(zip(df['landmark_id'].astype(str), df['landmark_name']))
+    
+    base_dataset_folder = os.path.basename(os.path.normpath(dataset_dir))
 
     qa_pairs_count = 0
 
@@ -191,9 +195,10 @@ def create_model_dataset(df, file_output, dataset_dir):
                 true_landmark_name = id_to_name.get(folder_name, "Unknown Landmark")
                 
                 for filename in os.listdir(folder_path):
-                    img_path = os.path.join(folder_path, filename)
+                    #img_path = os.path.join(folder_path, filename)
+                    hf_relative_path = f"{folder_name}/{filename}"
                     
-                    format_qa = create_qa_pair(img_path, true_landmark_name)
+                    format_qa = create_qa_pair(hf_relative_path, true_landmark_name)
                     
                     f.write(json.dumps(format_qa, ensure_ascii=False) + '\n')
                     qa_pairs_count += 1
@@ -201,51 +206,52 @@ def create_model_dataset(df, file_output, dataset_dir):
     
 if __name__ == "__main__":
     
-    # print("EXTRACTING DATA")
+    print("EXTRACTING DATA")
     
-    # df_final = extract_data()
-    # #df_final.to_csv(str(DATA_DIR / "processed" / "extracted_train.csv"), index=False)
+    df_final = extract_data()
+    #df_final.to_csv(str(DATA_DIR / "processed" / "extracted_train.csv"), index=False)
     
     df_final = pd.read_csv(str(DATA_DIR / "processed" / "extracted_train.csv"))
     
-    # print("DOWNLOADING IMAGES\n")
+    print("DOWNLOADING IMAGES\n")
     
-    # tasks = df_final.to_dict('records')
-    # successful_downloads = []
+    tasks = df_final.to_dict('records')
+    successful_downloads = []
 
-    # with ThreadPoolExecutor(max_workers=NUM_THREADS) as executor:
-    #     futures = [executor.submit(download_image, task) for task in tasks]
+    with ThreadPoolExecutor(max_workers=NUM_THREADS) as executor:
+        futures = [executor.submit(download_image, task) for task in tasks]
         
-    #     for future in tqdm(
-    #         as_completed(futures),
-    #         total=len(futures),
-    #         desc="Downloading images"
-    #     ):
-    #         res = future.result()
-    #         if res is not None:
-    #             successful_downloads.append(res)
+        for future in tqdm(
+            as_completed(futures),
+            total=len(futures),
+            desc="Downloading images"
+        ):
+            res = future.result()
+            if res is not None:
+                successful_downloads.append(res)
                 
-    # print(
-    #     f"Successfully downloaded {len(successful_downloads)}/{len(df_final)} images."
-    # )
+    print(
+        f"Successfully downloaded {len(successful_downloads)}/{len(df_final)} images."
+    )
     
-    # # RESIZE IMAGE
-    # print("RESIZE IMAGE")
-    # all_images = get_all_path_img(DATASET_DIR)
+    # RESIZE IMAGE
+    print("RESIZE IMAGE")
+    all_images = get_all_path_img(DATASET_DIR)
     
-    # successful = 0
-    # with ThreadPoolExecutor(max_workers=8) as executor:
-    #     futures = [executor.submit(resize_image, path) for path in all_images]
-    #     for future in tqdm(
-    #         as_completed(futures), 
-    #         total=len(futures), 
-    #         desc="Resizing"
-    #     ):
-    #         if future.result():
-    #             successful += 1
+    successful = 0
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = [executor.submit(resize_image, path) for path in all_images]
+        for future in tqdm(
+            as_completed(futures), 
+            total=len(futures), 
+            desc="Resizing"
+        ):
+            if future.result():
+                successful += 1
 
-    # print(f"\nSuccessfully resize {successful}/{len(all_images)} images")
+    print(f"\nSuccessfully resize {successful}/{len(all_images)} images")
     
+    # CREATE QA DATASET
     create_model_dataset(df=df_final, file_output=JSONL_OUTPUT, dataset_dir=DATASET_DIR)
     
     
