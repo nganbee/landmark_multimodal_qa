@@ -1,0 +1,9 @@
+.venv/
+.env
+
+requirements.txt
+
+data/landmark_dataset
+data/raw
+
+src/data_extract.ipynb
