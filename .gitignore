@@ -1,6 +1,6 @@
 .venv/
 .env
-
+venv
 requirements.txt
 
 data/landmark_dataset
