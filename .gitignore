@@ -1,9 +1,15 @@
 .venv/
+venv/
 .env
-
-requirements.txt
 
 data/landmark_dataset
 data/raw
 
 src/data_extract.ipynb
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Python cache 
+src/**/__pycache__/
