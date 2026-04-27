@@ -2,6 +2,10 @@
 venv/
 .env
 venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
 models/
 
@@ -11,13 +15,8 @@ data/landmark_*
 data/additional_dataset
 data/newdata
 
-
 src/model_server
 
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
 
 # Python cache 
 src/**/__pycache__/
