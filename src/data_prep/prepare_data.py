@@ -15,7 +15,7 @@ load_dotenv()
 EMAIL = os.getenv("EMAIL")
 
 # Directory configuration
-ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = ROOT_DIR / 'data'
 
 CSV_TRAIN = DATA_DIR / 'raw' / 'train.csv'
@@ -151,11 +151,41 @@ def resize_image(file_path):
             
             img.thumbnail(MAX_SIZE, Image.Resampling.LANCZOS)
             
-            img.save(file_path, "JPEG", quality=85)
+            base_path = os.path.splitext(file_path)[0]
+            new_file_path = base_path + ".jpg"
+            
+            img.save(new_file_path, "JPEG", quality=95)
+            
+            if file_path.lower() != new_file_path.lower():
+                os.remove(file_path)
+                
         return True
     except Exception as e:
         print(f"\nError {file_path}: {e}")
         return False
+    
+def parallel_resize_dataset(dataset_dir, max_workers=8):
+    all_images = get_all_path_img(dataset_dir)
+    total_images = len(all_images)
+    successful = 0
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(resize_image, path): path for path in all_images}
+        
+        # Hiển thị thanh tiến trình
+        for future in tqdm(
+            as_completed(futures), 
+            total=total_images, 
+            desc="Resizing Images"
+        ):
+            try:
+                if future.result(): 
+                    successful += 1
+            except Exception as e:
+                img_path = futures[future]
+                print(f"\nError {img_path}: {e}")
+
+    print(f"\nSuccessfully resize {successful}/{len(all_images)} images")
     
 def create_qa_pair(image_path, landmark_name):
     question = random.choice(PROMPT_TEMPLATES)
@@ -209,7 +239,7 @@ if __name__ == "__main__":
     print("EXTRACTING DATA")
     
     df_final = extract_data()
-    #df_final.to_csv(str(DATA_DIR / "processed" / "extracted_train.csv"), index=False)
+    df_final.to_csv(str(DATA_DIR / "processed" / "extracted_train_1.csv"), index=False)
     
     df_final = pd.read_csv(str(DATA_DIR / "processed" / "extracted_train.csv"))
     
