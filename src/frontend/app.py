@@ -6,6 +6,8 @@ import io
 import uuid
 from datetime import datetime
 
+import requests
+
 # ---------- PAGE CONFIG (MOBILE-FRIENDLY) ----------
 st.set_page_config(
     page_title="Vietnam Landmark QA - AI Agent",
@@ -119,21 +121,50 @@ st.markdown("""
 # ---------- MOCK AI FUNCTIONS (Vietnamese output) ----------
 def call_app_server(image, prompt, history_context=""):
     """Mock processing from App Server - replace with real model later."""
-    time.sleep(1.2)
-    landmark_name = "Nhà thờ Đức Bà Sài Gòn"
-    history_info = "Khởi công năm 1877, hoàn thành năm 1880, kiến trúc Gothic Roman đặc trưng."
-    if "Hà Nội" in prompt or "chùa" in prompt:
-        landmark_name = "Chùa Một Cột"
-        history_info = "Xây dựng năm 1049 dưới thời vua Lý Thái Tông, biểu tượng của thủ đô Hà Nội."
-    elif "Huế" in prompt or "cung đình" in prompt:
-        landmark_name = "Đại Nội Huế"
-        history_info = "Kinh đô nhà Nguyễn từ 1802 đến 1945, di sản văn hóa thế giới UNESCO."
-    return {
-        "answer": f"🏛️ **{landmark_name}**\n\n{history_info}\n\n{('Trả lời: ' + prompt) if prompt else ''}",
-        "history": history_info,
-        "confidence": 0.92,
-        "sources": ["Wikipedia", "Cục Di sản Văn hóa", "Vietnam Travel"]
-    }
+    # time.sleep(1.2)
+    # landmark_name = "Nhà thờ Đức Bà Sài Gòn"
+    # history_info = "Khởi công năm 1877, hoàn thành năm 1880, kiến trúc Gothic Roman đặc trưng."
+    # if "Hà Nội" in prompt or "chùa" in prompt:
+    #     landmark_name = "Chùa Một Cột"
+    #     history_info = "Xây dựng năm 1049 dưới thời vua Lý Thái Tông, biểu tượng của thủ đô Hà Nội."
+    # elif "Huế" in prompt or "cung đình" in prompt:
+    #     landmark_name = "Đại Nội Huế"
+    #     history_info = "Kinh đô nhà Nguyễn từ 1802 đến 1945, di sản văn hóa thế giới UNESCO."
+    # return {
+    #     "answer": f"🏛️ **{landmark_name}**\n\n{history_info}\n\n{('Trả lời: ' + prompt) if prompt else ''}",
+    #     "history": history_info,
+    #     "confidence": 0.92,
+    #     "sources": ["Wikipedia", "Cục Di sản Văn hóa", "Vietnam Travel"]
+    # }
+    
+    """Gửi yêu cầu thực tế tới Backend FastAPI."""
+    # URL của Backend khi chạy local
+    url = "http://localhost:8000/process"
+    
+    # Chuẩn bị dữ liệu gửi đi (Multipart Form-Data)
+    files = {"image": (image.name, image.getvalue(), image.type)}
+    data = {"prompt": prompt}
+
+    try:
+        # Gửi request POST tới Backend
+        response = requests.post(url, files=files, data=data)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return {
+                "answer": "System Error: Can not get answer from Backend",
+                "landmark": "Không xác định",
+                "weather": "N/A",
+                "confidence": 0
+            }
+    except Exception as e:
+        return {
+            "answer": f"Error Connection: {str(e)}",
+            "landmark": "N/A",
+            "weather": "N/A",
+            "confidence": 0
+        }
 
 def get_admin_metrics():
     """Mock database metrics for admin dashboard."""
@@ -207,11 +238,11 @@ with col_title:
     st.caption("Hỏi đáp đa phương thức thông minh - Hỗ trợ du lịch và văn hóa Việt Nam")
 with col_role:
     with st.popover("⚙️"):
-        if st.button("User mode", use_container_width=True):
+        if st.button("User mode", width="stretch"):
             st.session_state.role_mode = "user"
             st.session_state.authenticated = False
             st.rerun()
-        if st.button("Admin mode", use_container_width=True):
+        if st.button("Admin mode", width="stretch"):
             st.session_state.role_mode = "admin"
             st.rerun()
 
@@ -219,7 +250,7 @@ with col_role:
 with st.sidebar:
     st.markdown("## Chat history")
     # Remove icon from New chat button as requested
-    if st.button("➕ New chat", use_container_width=True):
+    if st.button("New chat", width="stretch"):
         create_new_conversation()
     st.markdown("---")
     for conv_id, conv in sorted(st.session_state.conversations.items(), key=lambda x: x[1]["created_at"], reverse=True):
@@ -231,7 +262,7 @@ with st.sidebar:
                 st.markdown(f"<div class='conv-title'>{conv['title']}</div>", unsafe_allow_html=True)
         with col2:
             with st.popover("⋮"):
-                if st.button("Xóa", key=f"del_{conv_id}", use_container_width=True):
+                if st.button("Xóa", key=f"del_{conv_id}", width="stretch"):
                     delete_conversation(conv_id)
 
 # ========== ADMIN MODE ==========
@@ -280,7 +311,7 @@ else:
             for msg in messages:
                 with st.chat_message(msg["role"]):
                     if msg.get("image"):
-                        st.image(msg["image"], caption="Ảnh đính kèm", use_container_width=True)
+                        st.image(msg["image"], caption="Ảnh đính kèm", width=250)
                     st.markdown(msg["content"])
     
     # Integrated chat input + file upload (supports camera on mobile)
@@ -312,11 +343,16 @@ else:
             
             with st.spinner("🧠 Agent đang phân tích ảnh và suy luận..."):
                 result = call_app_server(uploaded_file, prompt)
-                assistant_reply = (
-                    f"{result['answer']}\n\n---\n"
-                    f"📚 **Nguồn:** {', '.join(result['sources'])}\n"
-                    f"🎯 **Độ tin cậy:** {result['confidence']*100:.0f}%"
-                )
+                assistant_reply = f"""
+**Địa danh:** {result.get('landmark', 'N/A')}
+**Thời tiết:** {result.get('weather', 'N/A')}
+
+---
+{result.get('answer', 'Không có câu trả lời.')}
+
+---
+**Độ tin cậy:** {result.get('confidence', 0)*100:.0f}%
+"""
             add_message_to_current("assistant", assistant_reply)
             
             st.session_state.file_uploader_key += 1

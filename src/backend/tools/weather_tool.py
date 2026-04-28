@@ -2,7 +2,11 @@ from langchain.tools import tool
 import requests
 import os
 
+import logging
 
+# Thiết lập logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 @tool
 def get_current_weather(location_name: str) -> dict:
     """Get current weather for a city"""
@@ -20,7 +24,10 @@ def get_current_weather(location_name: str) -> dict:
     res = requests.get(url, params=params)
 
     if res.status_code != 200:
-        return {"error": "Weather not available"}
+        # return {"error": "Weather not available"}
+        logger.error(f"Status Code: {res.status_code}")
+        logger.error(f"Response: {res.text}")
+        return {"location": location_name, "error": "Weather not available"}
 
     data = res.json()
 
