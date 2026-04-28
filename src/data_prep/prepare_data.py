@@ -232,10 +232,9 @@ def create_model_dataset(df, file_output, dataset_dir):
                     
                     f.write(json.dumps(format_qa, ensure_ascii=False) + '\n')
                     qa_pairs_count += 1
-    print(f"Successfully create {qa_pairs_count} QA pairs")             
+    print(f"Successfully create {qa_pairs_count} QA pairs")
     
-if __name__ == "__main__":
-    
+def main():
     print("EXTRACTING DATA")
     
     df_final = extract_data()
@@ -283,6 +282,3 @@ if __name__ == "__main__":
     
     # CREATE QA DATASET
     create_model_dataset(df=df_final, file_output=JSONL_OUTPUT, dataset_dir=DATASET_DIR)
-    
-    
-    
