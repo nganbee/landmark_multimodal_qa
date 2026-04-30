@@ -1,6 +1,6 @@
 # backend/main.py
 from fastapi import FastAPI, UploadFile, Form, File
-from .pipeline import Pipeline
+from pipeline import Pipeline
 import io
 from PIL import Image
 
@@ -22,6 +22,6 @@ async def process_request(
         "answer": result["answer"],
         "landmark": result["landmark"],
         "weather": result["weather"],
-        "confidence": 0.95,
+        "confidence": result["confidence"],
         "sources": ["Wikipedia", "OpenWeather"]
     }

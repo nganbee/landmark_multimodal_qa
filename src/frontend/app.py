@@ -153,15 +153,14 @@ def call_app_server(image, prompt, history_context=""):
             return response.json()
         else:
             return {
-                "answer": "System Error: Can not get answer from Backend",
-                "landmark": "Không xác định",
-                "weather": "N/A",
-                "confidence": 0
-            }
+            "answer": "System Error: Cannot get answer from Backend",
+            "landmark": "Unknown",
+            "weather": "N/A",
+            "confidence": 0
+        }
     except Exception as e:
         return {
-            "answer": f"Error Connection: {str(e)}",
-            "landmark": "N/A",
+            "answer": f"Connection Error: {str(e)}",
             "weather": "N/A",
             "confidence": 0
         }
@@ -182,7 +181,7 @@ if "current_conv_id" not in st.session_state:
     first_id = str(uuid.uuid4())
     st.session_state.conversations[first_id] = {
         "id": first_id,
-        "title": "Hội thoại mới",
+        "title": "New conversation",
         "messages": [],
         "created_at": datetime.now()
     }
@@ -213,7 +212,7 @@ def create_new_conversation():
     new_id = str(uuid.uuid4())
     st.session_state.conversations[new_id] = {
         "id": new_id,
-        "title": "➕ Hội thoại mới",
+        "title": "➕ New conversation",
         "messages": [],
         "created_at": datetime.now()
     }
@@ -235,22 +234,22 @@ def delete_conversation(conv_id):
 col_title, col_role = st.columns([6, 1])
 with col_title:
     st.title("Vietnam Landmark Multimodal QA")
-    st.caption("Hỏi đáp đa phương thức thông minh - Hỗ trợ du lịch và văn hóa Việt Nam")
+    st.caption("Intelligent Multimodal Q&A - Supporting Vietnam's Tourism and Culture")
 with col_role:
     with st.popover("⚙️"):
-        if st.button("User mode", width="stretch"):
+        if st.button("User Mode", width="stretch"):
             st.session_state.role_mode = "user"
             st.session_state.authenticated = False
             st.rerun()
-        if st.button("Admin mode", width="stretch"):
+        if st.button("Admin Mode", width="stretch"):
             st.session_state.role_mode = "admin"
             st.rerun()
 
 # ========== SIDEBAR (ENGLISH TITLE, VIETNAMESE BUTTONS) ==========
 with st.sidebar:
-    st.markdown("## Chat history")
+    st.markdown("## Chat History")
     # Remove icon from New chat button as requested
-    if st.button("New chat", width="stretch"):
+    if st.button("New Chat", width="stretch"):
         create_new_conversation()
     st.markdown("---")
     for conv_id, conv in sorted(st.session_state.conversations.items(), key=lambda x: x[1]["created_at"], reverse=True):
@@ -262,32 +261,32 @@ with st.sidebar:
                 st.markdown(f"<div class='conv-title'>{conv['title']}</div>", unsafe_allow_html=True)
         with col2:
             with st.popover("⋮"):
-                if st.button("Xóa", key=f"del_{conv_id}", width="stretch"):
+                if st.button("Delete", key=f"del_{conv_id}", width="stretch"):
                     delete_conversation(conv_id)
 
 # ========== ADMIN MODE ==========
 if st.session_state.role_mode == "admin":
     st.markdown("## Admin Dashboard")
     if not st.session_state.authenticated:
-        password = st.text_input("Mật khẩu quản trị", type="password")
-        if st.button("Xác nhận"):
+        password = st.text_input("Password", type="password")
+        if st.button("Confirm"):
             if password == "123":
                 st.session_state.authenticated = True
                 st.rerun()
             else:
-                st.error("Sai mật khẩu!")
+                st.error("Wrong password!")
     else:
         metrics = get_admin_metrics()
         col1, col2, col3 = st.columns(3)
-        col1.metric("Độ chính xác", f"{metrics['accuracy']*100:.1f}%")
+        col1.metric("Accuracy", f"{metrics['accuracy']*100:.1f}%")
         col2.metric("F1-Score", f"{metrics['f1_score']:.2f}")
-        col3.metric("Độ trễ trung bình", metrics['avg_latency'])
+        col3.metric("Average Latency", metrics['avg_latency'])
         
-        st.subheader("Lượng truy vấn theo thời gian")
-        chart_data = pd.DataFrame(metrics['requests'], columns=["Số lượng"])
+        st.subheader("Request Volume Over Time")
+        chart_data = pd.DataFrame(metrics['requests'], columns=["Count"])
         st.line_chart(chart_data)
-        st.info("Hệ thống đang hoạt động ổn định, 98.7% yêu cầu thành công.")
-        if st.button("Đăng xuất"):
+        st.info("System is operating normally, 98.7% requests successful.")
+        if st.button("Logout"):
             st.session_state.authenticated = False
             st.rerun()
 
@@ -303,7 +302,7 @@ else:
             # Greeting: larger, no icon, closer to chat input due to reduced padding
             st.markdown(
                 '<div class="greeting-box">'
-                '<p><strong>Chào bạn</strong>, hôm nay bạn muốn khám phá địa điểm hay công trình nào?</p>'
+                '<p><strong>Hello</strong>, what landmark or building would you like to explore today?</p>'
                 '</div>',
                 unsafe_allow_html=True
             )
@@ -311,13 +310,13 @@ else:
             for msg in messages:
                 with st.chat_message(msg["role"]):
                     if msg.get("image"):
-                        st.image(msg["image"], caption="Ảnh đính kèm", width=250)
+                        st.image(msg["image"], caption="Attached image", width=250)
                     st.markdown(msg["content"])
     
     # Integrated chat input + file upload (supports camera on mobile)
     with st.container():
         st.markdown('<div class="chat-input-wrapper">', unsafe_allow_html=True)
-        prompt = st.chat_input("Nhập câu hỏi về địa danh, công trình lịch sử...")
+        prompt = st.chat_input("Ask a question about landmarks, historical sites...")
         # File uploader that also allows taking a photo directly from camera on mobile
         uploaded_file = st.file_uploader(
             "📷", type=["jpg", "jpeg", "png"],
@@ -330,7 +329,7 @@ else:
     # Handle submission
     if prompt or uploaded_file:
         if uploaded_file and not prompt:
-            st.warning("Vui lòng nhập câu hỏi kèm theo ảnh.")
+            st.warning("Please enter a question with an image.")
         elif prompt:
             image_bytes = None
             if uploaded_file:
@@ -341,17 +340,18 @@ else:
             
             add_message_to_current("user", prompt, image_bytes)
             
-            with st.spinner("🧠 Agent đang phân tích ảnh và suy luận..."):
+            with st.spinner("🧠 Thinking..."):
                 result = call_app_server(uploaded_file, prompt)
                 assistant_reply = f"""
-**Địa danh:** {result.get('landmark', 'N/A')}
-**Thời tiết:** {result.get('weather', 'N/A')}
+**Landmark Name:** {result.get('landmark', 'Unknown')}
+
+**Weather:** {result.get('weather', 'N/A')}
 
 ---
-{result.get('answer', 'Không có câu trả lời.')}
+{result.get('answer', 'No answer available')}
 
 ---
-**Độ tin cậy:** {result.get('confidence', 0)*100:.0f}%
+**Confidence:** {result.get('confidence', 0)*100:.0f}%
 """
             add_message_to_current("assistant", assistant_reply)
             

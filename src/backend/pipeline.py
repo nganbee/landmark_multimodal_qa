@@ -1,10 +1,17 @@
 import torch
 import time
+import io
+import os
+import requests
 from PIL import Image
 import random #add
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from agents.agent import generate_answer, plan_actions
 from model.load_model import get_model
+from model.vision_model import LandmarkModel
 from tools.weather_tool import get_current_weather
 
 
@@ -14,7 +21,11 @@ class Pipeline:
         # self.model, self.processor = get_model()
         # self.device = "cuda" if torch.cuda.is_available() else "cpu"
         
-        print("MOCK Pipeline initialized - No real models loaded")
+        print("Connect Model to Colab")
+        self.pinggy_url = os.getenv("PINGGY_URL")
+        self.landmark_model = LandmarkModel(self.pinggy_url)
+        
+        
 
     def clean_text(self, text: str):
         if "assistant" in text:
@@ -22,55 +33,21 @@ class Pipeline:
         return text.strip()
 
     def detect_landmark(self, image):
-        # print(">>> [VISION] Start detect_landmark")
-        # t0 = time.time()
+        print(">>> [VISION] Start detect_landmark")
+        print(f">>> [VISION] Connecting to Remote Model")
+        t0 = time.time()
 
-        # prompt = "What is this place? Answer short."
-
-        # messages = [
-        #     {
-        #         "role": "user",
-        #         "content": [
-        #             {"type": "image", "image": image},
-        #             {"type": "text", "text": prompt},
-        #         ],
-        #     }
-        # ]
-
-        # text = self.processor.apply_chat_template(
-        #     messages,
-        #     tokenize=False,
-        #     add_generation_prompt=True,
-        # )
-
-        # print(">>> [VISION] Encoding input...")
-
-        # inputs = self.processor(
-        #     text=[text],
-        #     images=[image],
-        #     return_tensors="pt",
-        # )
-
-        # inputs = {k: v.to(self.device) for k, v in inputs.items()}
-
-        # print(">>> [VISION] Generating... (THIS IS SLOW)")
-
-        # with torch.no_grad():
-        #     outputs = self.model.generate(**inputs, max_new_tokens=50)
-
-        # print(">>> [VISION] Decoding...")
-
-        # result = self.processor.decode(outputs[0], skip_special_tokens=True)
-
-        # print(f">>> [VISION] DONE in {time.time() - t0:.2f}s")
-
-        # return self.clean_text(result)
+        result = self.landmark_model.predict(image)
         
-        # Using Mock Data
-        landmarks = ["Dinh Độc Lập", "Hồ Gươm", "Đại Nội Huế"]
-        selected = random.choice(landmarks)
-        print(f">>> [MOCK VISION] Random detect: {selected}")
-        return selected
+        raw_text = result.get("landmark", "Outside scope")
+        confidence = result.get("confidence", 0.0)
+        
+        print(f">>> [VISION] DONE in {time.time() - t0:.2f}s")
+        
+        #prefix = "Based on the visual features, this is "
+        #clean_name = raw_text.replace(prefix, "").strip()
+
+        return raw_text, confidence
 
     def extract_location(self, landmark: str):
         print(">>> [LLM] Extract location...")
@@ -129,8 +106,17 @@ Weather in {data['location']}:
     def run_image(self, image, question: str):
         print(">>> RUN IMAGE START")
 
-        landmark = self.detect_landmark(image)
+        landmark, score = self.detect_landmark(image)
         print("Landmark:", landmark)
+        
+        if "Outside scope" in landmark or landmark == "Unknown":
+            return {
+                "answer": "Sorry this landmark is outside of my knowledge.",
+                "landmark": "Unknown",
+                "weather": "N/A",
+                "confidence": score,
+                "status": "success"
+            }
         
         weather_text = "None"
 
@@ -181,5 +167,6 @@ Question: {question}
             "answer": answer,
             "landmark": landmark,
             "weather": weather_text,
+            "confidence" : score,
             "status": "success"
         }
