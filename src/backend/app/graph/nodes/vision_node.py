@@ -78,18 +78,6 @@ def vision_node(state: AgentState):
             "Unknown"
         ),
 
-        "architectural_style":
-        result.get(
-            "architectural_style",
-            "Unknown"
-        ),
-
-        "cultural_significance":
-        result.get(
-            "cultural_significance",
-            "Unknown"
-        ),
-
         "reasoning_confidence":
         result.get(
             "reasoning_confidence",

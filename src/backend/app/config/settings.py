@@ -82,6 +82,9 @@ class Settings(BaseSettings):
     OPENWEATHER_FORECAST_URL: str
 
     OPENWEATHER_GEOCODING_URL: str
+    
+    # =========================================================
+    SERPAPI_API_KEY: str
 
 
 # =========================================================

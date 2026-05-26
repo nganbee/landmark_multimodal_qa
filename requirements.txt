@@ -22,3 +22,6 @@ python-multipart>=0.0.9
 #
 pydantic-settings 
 python-dotenv
+googlemaps
+google-search-results
+langgraph

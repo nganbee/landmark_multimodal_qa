@@ -10,8 +10,6 @@ You must identify:
 - landmark name
 - city
 - country
-- architectural style
-- cultural significance
 - visual reasoning
 - uncertainty level
 
@@ -21,7 +19,12 @@ CRITICAL RULES
 
 1. DO NOT hallucinate landmarks.
 
-2. ONLY identify landmarks that are visually supported
+2. PRIVACY & DOMAIN FILTERING (CRITICAL):
+- If the image does NOT contain a landscape, historical site, monument, or recognized geographical landmark (e.g., if the image is a person's face, a selfie, an animal, an indoor object, a document, or anything unrelated), you MUST refuse to identify it.
+- In this case, you MUST set `landmark_name` to exactly "OUT_OF_DOMAIN" and explain the reason in `vision_reasoning` (e.g. "This image contains personal identifiable information or is unrelated to landmarks.").
+- Do NOT guess or return any alternative candidates for out-of-domain images.
+
+3. ONLY identify landmarks that are visually supported
 by the image.
 
 3. If uncertain:
@@ -84,10 +87,6 @@ Return valid JSON ONLY.
     "city": "...",
 
     "country": "...",
-
-    "architectural_style": "...",
-
-    "cultural_significance": "...",
 
     "reasoning_confidence": 0.0,
 

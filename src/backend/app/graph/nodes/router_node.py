@@ -21,8 +21,6 @@ def router_node(state: AgentState):
 
     query = state["user_query"]
 
-    has_image = state.get("image") is not None
-
     # =====================================================
     # BUILD ROUTING PROMPT
     # =====================================================
@@ -36,9 +34,6 @@ USER INPUT
 
 User Query:
 {query}
-
-Has Image:
-{has_image}
 """
 
     # =====================================================
@@ -54,6 +49,11 @@ Has Image:
     try:
 
         parsed = json.loads(response)
+        
+        # Ensure it's a list
+        intents = parsed.get("intents", [])
+        if not isinstance(intents, list):
+            intents = [intents] if intents else ["general_info"]
 
     except Exception:
 
@@ -61,22 +61,7 @@ Has Image:
         # FALLBACK SAFE ROUTING
         # -------------------------------------------------
 
-        parsed = {
-
-            "intent": "general_landmark_query",
-
-            "requires_vision": has_image,
-
-            "requires_weather": False,
-
-            "requires_information": True,
-
-            "requires_nearby_search": False,
-
-            "requires_itinerary": False,
-
-            "requires_comparison": False
-        }
+        intents = ["general_info"]
 
     # =====================================================
     # RETURN STATE UPDATE
@@ -84,38 +69,5 @@ Has Image:
 
     return {
 
-        "intent": parsed.get(
-            "intent",
-            "general_landmark_query"
-        ),
-
-        "requires_vision": parsed.get(
-            "requires_vision",
-            has_image
-        ),
-
-        "requires_weather": parsed.get(
-            "requires_weather",
-            False
-        ),
-
-        "requires_information": parsed.get(
-            "requires_information",
-            True
-        ),
-
-        "requires_nearby_search": parsed.get(
-            "requires_nearby_search",
-            False
-        ),
-
-        "requires_itinerary": parsed.get(
-            "requires_itinerary",
-            False
-        ),
-
-        "requires_comparison": parsed.get(
-            "requires_comparison",
-            False
-        )
+        "intents": intents
     }
