@@ -22,13 +22,9 @@ class NearbyPlacesTool:
     # =====================================================
 
     def search_places(
-
         self,
-
-        city: str,
-
+        location_query: str,
         query_type: str = "tourist attractions",
-
         limit: int = 5
     ):
 
@@ -36,9 +32,7 @@ class NearbyPlacesTool:
         print(" SERPAPI NEARBY TOOL ")
         print("===================================\n")
 
-        query = f"""
-{query_type} in {city}
-"""
+        query = f"{query_type} near {location_query}".strip()
 
         print("\n===== SEARCH QUERY =====\n")
 
@@ -73,9 +67,7 @@ class NearbyPlacesTool:
 
         results = search.get_dict()
 
-        print("\n===== RAW SERPAPI RESULT =====\n")
-
-        print(results)
+        print("\n===== SERPAPI RESULTS FETCHED =====\n")
 
         # =================================================
         # EXTRACT LOCAL RESULTS

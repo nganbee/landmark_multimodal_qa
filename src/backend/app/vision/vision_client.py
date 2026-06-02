@@ -59,41 +59,29 @@ USER QUERY
         # -------------------------------------------------
         # REMOTE INFERENCE
         # -------------------------------------------------
-
-        response = requests.post(
-
-            f"{self.base_url}/predict_landmark",
-
-            files={
-                "file": buffer.getvalue()
-            },
-
-            data={
-                "prompt": prompt
-            },
-
-            timeout=60
-        )
-
-        # -------------------------------------------------
-        # HANDLE API FAILURE
-        # -------------------------------------------------
-
-        if response.status_code != 200:
-
+        try:
+            response = requests.post(
+                f"{self.base_url}/predict_landmark",
+                files={"file": buffer.getvalue()},
+                data={"prompt": prompt},
+                timeout=60
+            )
+            
+            if response.status_code != 200:
+                return {
+                    "landmark_name": "Unknown",
+                    "reasoning_confidence": 0.0,
+                    "vision_reasoning": "Vision API request failed.",
+                    "alternative_candidates": [],
+                    "error": f"HTTP {response.status_code}"
+                }
+        except requests.exceptions.RequestException as e:
             return {
-
                 "landmark_name": "Unknown",
-
                 "reasoning_confidence": 0.0,
-
-                "vision_reasoning":
-                "Vision API request failed.",
-
+                "vision_reasoning": f"Cannot connect to Vision Server (Ngrok might be down). Error: {str(e)}",
                 "alternative_candidates": [],
-
-                "error":
-                f"HTTP {response.status_code}"
+                "error": "VISION_SERVER_UNREACHABLE"
             }
 
         # -------------------------------------------------
@@ -141,18 +129,6 @@ USER QUERY
             "country":
             result.get(
                 "country",
-                "Unknown"
-            ),
-
-            "architectural_style":
-            result.get(
-                "architectural_style",
-                "Unknown"
-            ),
-
-            "cultural_significance":
-            result.get(
-                "cultural_significance",
                 "Unknown"
             ),
 

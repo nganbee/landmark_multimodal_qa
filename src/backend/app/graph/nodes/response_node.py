@@ -22,8 +22,10 @@ def response_node(
 ):
 
     print("\n===================================")
-    print(" RESPONSE NODE ")
+    print(" DRAFT (RESPONSE) NODE ")
     print("===================================\n")
+
+    tool_results = state.get("tool_results", {}) or {}
 
     # =====================================================
     # BUILD CONTEXT
@@ -46,20 +48,13 @@ def response_node(
             "detected_country"
         ),
 
-        "weather_result":
+        "intents":
         state.get(
-            "weather_result"
+            "intents"
         ),
 
-        "nearby_places_result":
-        state.get(
-            "nearby_places_result"
-        ),
-
-        "search_result":
-        state.get(
-            "search_result"
-        )
+        "tool_results":
+        tool_results
     }
 
     print("\n===== RESPONSE CONTEXT =====\n")
@@ -113,6 +108,6 @@ AVAILABLE INFORMATION
 
     return {
 
-        "final_response":
+        "final_answer":
         final_response
     }

@@ -60,22 +60,42 @@ def validation_node(state: AgentState):
         )
 
     # =====================================================
+    # OUT OF DOMAIN (PRIVACY & ROBUSTNESS)
+    # =====================================================
+
+    elif landmark_name == "OUT_OF_DOMAIN":
+
+        is_valid_landmark = False
+
+        requires_retry = False
+
+        validation_error = (
+            "The image does not contain a valid landmark, landscape, or monument. Please provide another image."
+        )
+
+        reflection_reason = (
+            "Vision model rejected the image due to privacy/out-of-domain policies."
+        )
+
+    # =====================================================
     # UNKNOWN LANDMARK
     # =====================================================
 
     elif landmark_name == "Unknown":
 
-        is_valid_landmark = False
-
-        requires_retry = True
-
-        validation_error = (
-            "Landmark could not be identified."
-        )
-
-        reflection_reason = (
-            "Vision model failed to identify landmark."
-        )
+        city = state.get("detected_city", "Unknown")
+        
+        if city and city != "Unknown":
+            # We have a city, even if we don't have a specific landmark.
+            is_valid_landmark = True
+            requires_retry = False
+            validation_error = ""
+            reflection_reason = "Landmark unknown, but city detected. Proceeding with city context."
+        else:
+            is_valid_landmark = False
+            requires_retry = True
+            validation_error = "Landmark could not be identified."
+            reflection_reason = "Vision model failed to identify landmark or city."
 
     # =====================================================
     # LOW CONFIDENCE

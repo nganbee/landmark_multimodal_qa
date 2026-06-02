@@ -139,11 +139,30 @@ def call_app_server(image, prompt, history_context=""):
     
     """Gửi yêu cầu thực tế tới Backend FastAPI."""
     # URL của Backend khi chạy local
-    url = "http://localhost:8000/process"
+    import os
+    url = os.environ.get("API_URL", "http://localhost:8000/process")
     
     # Chuẩn bị dữ liệu gửi đi (Multipart Form-Data)
-    files = {"image": (image.name, image.getvalue(), image.type)}
-    data = {"prompt": prompt}
+    data = {
+        "prompt": prompt
+    }
+
+    files = None
+
+    if image is not None:
+        files = {
+            "image": (
+                image.name,
+                image.getvalue(),
+                image.type
+            )
+        }
+    else:
+        # Force multipart/form-data so FastAPI doesn't throw 422 Unprocessable Entity
+        files = {
+            "prompt": (None, prompt)
+        }
+        data = None
 
     try:
         # Gửi request POST tới Backend
@@ -343,15 +362,21 @@ else:
             with st.spinner("🧠 Thinking..."):
                 result = call_app_server(uploaded_file, prompt)
                 assistant_reply = f"""
-**Landmark Name:** {result.get('landmark', 'Unknown')}
-
-**Weather:** {result.get('weather', 'N/A')}
-
----
 {result.get('answer', 'No answer available')}
 
 ---
-**Confidence:** {result.get('confidence', 0)*100:.0f}%
+
+🏛 Landmark:
+{result.get('landmark', 'Unknown')}
+
+📍 City:
+{result.get('city', 'Unknown')}
+
+🌎 Country:
+{result.get('country', 'Unknown')}
+
+🎯 Confidence:
+{result.get('confidence', 0)*100:.0f}%
 """
             add_message_to_current("assistant", assistant_reply)
             

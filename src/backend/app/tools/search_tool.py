@@ -54,9 +54,7 @@ class SearchTool:
 
         results = search.get_dict()
 
-        print("\n===== RAW RESULTS =====\n")
-
-        print(results)
+        print("\n===== SEARCH COMPLETED =====\n")
 
         organic_results = results.get(
             "organic_results",
