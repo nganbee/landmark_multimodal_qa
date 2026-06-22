@@ -185,13 +185,20 @@ def call_app_server(image, prompt, history_context=""):
         }
 
 def get_admin_metrics():
-    """Mock database metrics for admin dashboard."""
-    return {
-        "accuracy": 0.94,
-        "f1_score": 0.91,
-        "avg_latency": "1.05s",
-        "requests": [12, 28, 42, 38, 55, 72, 68, 85, 90, 78]
-    }
+    """Fetch real database metrics from Backend API."""
+    import os
+    base_url = os.environ.get("API_URL", "http://localhost:8000")
+    # Remove /process suffix if present
+    base_url = base_url.replace("/process", "")
+    url = base_url + "/admin/metrics"
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            return response.json()
+    except Exception:
+        pass
+    # Fallback if backend is down
+    return None
 
 # ---------- SESSION STATE ----------
 if "conversations" not in st.session_state:
@@ -285,7 +292,7 @@ with st.sidebar:
 
 # ========== ADMIN MODE ==========
 if st.session_state.role_mode == "admin":
-    st.markdown("## Admin Dashboard")
+    st.markdown("<h2 style='color:#F1F5F9;'>Admin Dashboard</h2>", unsafe_allow_html=True)
     if not st.session_state.authenticated:
         password = st.text_input("Password", type="password")
         if st.button("Confirm"):
@@ -296,15 +303,214 @@ if st.session_state.role_mode == "admin":
                 st.error("Wrong password!")
     else:
         metrics = get_admin_metrics()
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Accuracy", f"{metrics['accuracy']*100:.1f}%")
-        col2.metric("F1-Score", f"{metrics['f1_score']:.2f}")
-        col3.metric("Average Latency", metrics['avg_latency'])
         
-        st.subheader("Request Volume Over Time")
-        chart_data = pd.DataFrame(metrics['requests'], columns=["Count"])
-        st.line_chart(chart_data)
-        st.info("System is operating normally, 98.7% requests successful.")
+        # ---- Dashboard CSS (Dark Theme) ----
+        st.markdown("""
+        <style>
+        /* Force dark background on the main area */
+        .main .block-container { background: #0B0F19; }
+        section[data-testid="stMainBlockContainer"] { background: #0B0F19; }
+        
+        .dash-subtitle {
+            text-align: center; color: #94A3B8; font-size: 1.15rem;
+            margin-bottom: 2rem; font-weight: 500; letter-spacing: 0.02em;
+        }
+        .kpi-card {
+            background: #111827; border-radius: 16px; padding: 1.3rem 1.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 0.8rem; transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        }
+        /* Colored left-border accents */
+        .kpi-card.border-cyan    { border-left: 4px solid #22D3EE; }
+        .kpi-card.border-emerald { border-left: 4px solid #34D399; }
+        .kpi-card.border-amber   { border-left: 4px solid #FBBF24; }
+        .kpi-card.border-rose    { border-left: 4px solid #FB7185; }
+        .kpi-card.border-violet  { border-left: 4px solid #A78BFA; }
+        .kpi-card.border-sky     { border-left: 4px solid #38BDF8; }
+        .kpi-card.border-orange  { border-left: 4px solid #FB923C; }
+        
+        .kpi-label { font-size: 0.85rem; color: #64748B; margin-bottom: 0.3rem; letter-spacing: 0.03em; }
+        .kpi-val { font-size: 1.8rem; font-weight: 700; color: #F1F5F9; }
+        .kpi-icon {
+            width: 44px; height: 44px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem;
+        }
+        .icon-cyan    { background: rgba(34,211,238,0.15); color: #22D3EE; }
+        .icon-emerald { background: rgba(52,211,153,0.15); color: #34D399; }
+        .icon-amber   { background: rgba(251,191,36,0.15); color: #FBBF24; }
+        .icon-rose    { background: rgba(251,113,133,0.15); color: #FB7185; }
+        .icon-violet  { background: rgba(167,139,250,0.15); color: #A78BFA; }
+        .icon-sky     { background: rgba(56,189,248,0.15); color: #38BDF8; }
+        .icon-orange  { background: rgba(251,146,60,0.15); color: #FB923C; }
+        
+        .box-card {
+            background: #111827; border-radius: 16px; padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3); border: 1px solid #1E293B;
+        }
+        .box-title {
+            font-size: 1.1rem; font-weight: 600; color: #E2E8F0; margin-bottom: 1rem;
+        }
+        .status-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            display: inline-block; margin-right: 0.5rem;
+            box-shadow: 0 0 8px currentColor;
+        }
+        .pill {
+            background: rgba(16,185,129,0.15); color: #34D399; border: 1px solid rgba(52,211,153,0.3);
+            padding: 0.5rem 1.2rem; border-radius: 20px; font-size: 1.25rem;
+            font-weight: 600; display: inline-block; margin: 0.8rem 0;
+        }
+        .tbl { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        .tbl th { text-align: left; padding: 0.6rem 0.8rem; color: #64748B;
+                   border-bottom: 2px solid #1E293B; font-weight: 600; }
+        .tbl td { padding: 0.55rem 0.8rem; border-bottom: 1px solid #1E293B; color: #CBD5E1; }
+        .tbl tr:hover td { background: #1E293B; }
+        .footer-note {
+            background: #111827; color: #64748B; padding: 0.7rem 1rem;
+            border-radius: 8px; font-size: 0.85rem; margin-top: 1.5rem;
+            border: 1px solid #1E293B;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        if metrics is None:
+            st.warning("⚠️ Không thể kết nối tới Backend API. Hãy đảm bảo Backend đang chạy tại http://localhost:8000")
+        else:
+            st.markdown("<div class='dash-subtitle'>Theo dõi hiệu suất và trạng thái vận hành của hệ thống</div>", unsafe_allow_html=True)
+            
+            # Extract values safely
+            total_req = metrics.get("total_requests", 0) or 0
+            avg_latency = metrics.get("avg_latency_ms", 0) or 0
+            avg_conf = metrics.get("avg_confidence", 0) or 0
+            success_rate = metrics.get("success_rate_percent", 0) or 0
+            feedback_acc = metrics.get("feedback_accuracy_percent", 0) or 0
+            total_fb = metrics.get("total_feedback_received", 0) or 0
+            unknown_rate = metrics.get("unknown_rate_percent", 0) or 0
+            top_landmarks = metrics.get("top_landmarks", []) or []
+            top_failures = metrics.get("top_failures", []) or []
+            hourly_data = metrics.get("hourly_requests", []) or []
+
+            # ---- Row 1: 5 KPI Cards ----
+            k1, k2, k3, k4, k5 = st.columns(5)
+            with k1:
+                st.markdown(f"""<div class="kpi-card border-emerald">
+                    <div><div class="kpi-label">Feedback Accuracy</div>
+                    <div class="kpi-val">{feedback_acc:.1f}%</div>
+                    <div class="kpi-label" style="margin-top:0.2rem;">({total_fb} feedbacks)</div></div>
+                    <div class="kpi-icon icon-emerald">✓</div>
+                </div>""", unsafe_allow_html=True)
+            with k2:
+                st.markdown(f"""<div class="kpi-card border-emerald">
+                    <div><div class="kpi-label">Success Rate</div>
+                    <div class="kpi-val">{success_rate:.1f}%</div></div>
+                    <div class="kpi-icon icon-emerald">🟢</div>
+                </div>""", unsafe_allow_html=True)
+            with k3:
+                st.markdown(f"""<div class="kpi-card border-amber">
+                    <div><div class="kpi-label">Avg Latency</div>
+                    <div class="kpi-val">{avg_latency/1000:.2f}s</div></div>
+                    <div class="kpi-icon icon-amber">⏱</div>
+                </div>""", unsafe_allow_html=True)
+            with k4:
+                st.markdown(f"""<div class="kpi-card border-violet">
+                    <div><div class="kpi-label">Avg Confidence</div>
+                    <div class="kpi-val">{avg_conf*100:.1f}%</div></div>
+                    <div class="kpi-icon icon-violet">🎯</div>
+                </div>""", unsafe_allow_html=True)
+            with k5:
+                st.markdown(f"""<div class="kpi-card border-rose">
+                    <div><div class="kpi-label">Unknown Rate</div>
+                    <div class="kpi-val">{unknown_rate:.1f}%</div></div>
+                    <div class="kpi-icon icon-rose">❓</div>
+                </div>""", unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # ---- Request Volume Over Time (Line Chart) ----
+            st.markdown('<div class="box-card"><div class="box-title">📈 Request Volume Over Time (Last 24h)</div>', unsafe_allow_html=True)
+            if hourly_data:
+                from datetime import datetime as dt
+                chart_df = pd.DataFrame(hourly_data)
+                chart_df["hour"] = pd.to_datetime(chart_df["hour"])
+                chart_df = chart_df.set_index("hour")
+                chart_df.columns = ["Requests"]
+                st.line_chart(chart_df, color="#22D3EE")
+            else:
+                st.markdown("<div style='color:#64748B;text-align:center;padding:2rem;'>Chưa có dữ liệu request trong 24 giờ qua.</div>", unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # ---- Row 3: System Status + Top Landmarks ----
+            col_left, col_right = st.columns([1, 1.2])
+            with col_left:
+                # Determine status color
+                if success_rate >= 90:
+                    dot_color, status_text = "#10B981", "Hệ thống đang hoạt động bình thường"
+                elif success_rate >= 70:
+                    dot_color, status_text = "#F59E0B", "Hệ thống đang có dấu hiệu bất thường"
+                else:
+                    dot_color, status_text = "#EF4444", "Hệ thống đang gặp sự cố nghiêm trọng"
+                
+                st.markdown(f"""<div class="box-card">
+                    <div class="box-title">System Status</div>
+                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+                        <span class="status-dot" style="background:{dot_color};"></span>
+                        <span style="color:#64748B;font-size:1rem;">{status_text}</span>
+                    </div>
+                    <div class="pill">{success_rate:.1f}% request thành công</div>
+                    <div style="color:#94A3B8;font-size:0.88rem;margin-top:0.5rem;">
+                        Dashboard hỗ trợ quan sát nhanh các chỉ số chính.
+                    </div>
+                </div>""", unsafe_allow_html=True)
+            
+            with col_right:
+                landmarks_html = ""
+                if top_landmarks:
+                    rows = ""
+                    for i, lm in enumerate(top_landmarks, 1):
+                        name = lm.get("landmark_name", "N/A")
+                        count = lm.get("count", 0)
+                        rows += f"<tr><td>{i}</td><td>{name}</td><td style='text-align:right;'>{count}</td></tr>"
+                    landmarks_html = f"""<table class="tbl">
+                        <thead><tr><th>#</th><th>Landmark</th><th style='text-align:right;'>Requests</th></tr></thead>
+                        <tbody>{rows}</tbody>
+                    </table>"""
+                else:
+                    landmarks_html = "<div style='color:#94A3B8;font-size:0.9rem;'>Chưa có dữ liệu landmark.</div>"
+                
+                st.markdown(f"""<div class="box-card">
+                    <div class="box-title">🏛 Top Detected Landmarks</div>
+                    {landmarks_html}
+                </div>""", unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # ---- Row 4: Top Failures ----
+            if top_failures:
+                fail_rows = ""
+                for i, f in enumerate(top_failures, 1):
+                    name = f.get("actual_landmark", "N/A")
+                    count = f.get("fail_count", 0)
+                    fail_rows += f"<tr><td>{i}</td><td>{name}</td><td style='text-align:right;'>{count}</td></tr>"
+                
+                st.markdown(f"""<div class="box-card">
+                    <div class="box-title">⚠️ Top Failures (User-reported Misidentifications)</div>
+                    <table class="tbl">
+                        <thead><tr><th>#</th><th>Actual Landmark (Ground Truth)</th><th style='text-align:right;'>Fail Count</th></tr></thead>
+                        <tbody>{fail_rows}</tbody>
+                    </table>
+                </div>""", unsafe_allow_html=True)
+            
+            st.markdown('<div class="footer-note">Monitoring Dashboard — Dữ liệu được truy vấn trực tiếp từ database Supabase theo thời gian thực.</div>', unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
         if st.button("Logout"):
             st.session_state.authenticated = False
             st.rerun()
