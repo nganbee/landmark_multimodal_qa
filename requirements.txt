@@ -25,3 +25,4 @@ python-dotenv
 googlemaps
 google-search-results
 langgraph
+psycopg2-binary
