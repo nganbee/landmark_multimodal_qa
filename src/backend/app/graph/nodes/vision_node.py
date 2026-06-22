@@ -11,6 +11,10 @@ from src.backend.app.vision.vision_client import (
 
 def vision_node(state: AgentState):
 
+    print("\n===================================")
+    print(" VISION NODE ")
+    print("===================================\n")
+    
     # =====================================================
     # EXTRACT STATE
     # =====================================================
@@ -47,12 +51,16 @@ def vision_node(state: AgentState):
     # RUN VISION ANALYSIS
     # =====================================================
 
+    print(f"[Vision Node] Calling Vision API on: {vision_client.base_url}/predict_landmark")
+    
     result = vision_client.analyze_landmark(
 
         image=image,
 
         user_query=query
     )
+    
+    print(f"[Vision Node] Result from Vision API: {result.get('landmark_name', 'Unknown')} (Error: {result.get('error', 'None')})")
 
     # =====================================================
     # RETURN STATE UPDATE
