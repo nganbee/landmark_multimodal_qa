@@ -2,7 +2,8 @@ from fastapi import (
     FastAPI,
     UploadFile,
     File,
-    Form
+    Form,
+    BackgroundTasks
 )
 
 from fastapi.middleware.cors import (
@@ -17,14 +18,25 @@ from src.backend.app.graph.workflow import (
     run_agent_workflow
 )
 
+from contextlib import asynccontextmanager
+import time
+import uuid
+from src.backend.app.config.db import init_db, log_request, log_feedback, get_dashboard_metrics, get_recent_logs
+from src.backend.app.image_utils import preprocess_image
+from pydantic import BaseModel
 
 # =========================================================
 # FASTAPI APP
 # =========================================================
 
-app = FastAPI(
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
 
-    title="Multimodal Travel Agent API"
+app = FastAPI(
+    title="Multimodal Travel Agent API",
+    lifespan=lifespan
 )
 
 # =========================================================
@@ -66,11 +78,14 @@ def health_check():
 
 @app.post("/process")
 async def process_request(
-
+    background_tasks: BackgroundTasks,
     prompt: str = Form(...),
 
     image: UploadFile | None = File(None)
 ):
+
+    start_time = time.time()
+    req_id = str(uuid.uuid4())
 
     print("\n===================================")
     print(" NEW REQUEST ")
@@ -101,6 +116,9 @@ async def process_request(
                 io.BytesIO(image_bytes)
 
             ).convert("RGB")
+            
+            # Apply padding and resizing optimizations
+            pil_image = preprocess_image(pil_image)
 
     except Exception as e:
 
@@ -142,10 +160,14 @@ async def process_request(
         print("\n===== WORKFLOW ERROR =====\n")
 
         print(str(e))
+        
+        latency_ms = (time.time() - start_time) * 1000
+        background_tasks.add_task(log_request, req_id, "/process", latency_ms, "Unknown", 0.0, False)
 
         return {
 
             "success": False,
+            "request_id": req_id,
 
             "error":
             str(e)
@@ -158,6 +180,8 @@ async def process_request(
     response = {
 
         "success": True,
+        
+        "request_id": req_id,
 
         "answer":
         result.get(
@@ -205,5 +229,32 @@ async def process_request(
     print("\n===== FINAL API RESPONSE =====\n")
 
     print(response)
+    
+    latency_ms = (time.time() - start_time) * 1000
+    background_tasks.add_task(log_request, req_id, "/process", latency_ms, response["landmark"], response["confidence"], True)
 
     return response
+
+# =========================================================
+# ADMIN DASHBOARD ENDPOINTS
+# =========================================================
+
+@app.get("/admin/metrics")
+def get_metrics():
+    """Returns aggregated metrics for the dashboard."""
+    return get_dashboard_metrics()
+
+@app.get("/admin/logs")
+def get_logs(limit: int = 50):
+    """Returns recent requests logs."""
+    return get_recent_logs(limit)
+
+class FeedbackRequest(BaseModel):
+    request_id: str
+    is_correct: bool
+    actual_landmark: str | None = None
+
+@app.post("/admin/feedback")
+def submit_feedback(feedback: FeedbackRequest):
+    """Submit user feedback for a specific request."""
+    return log_feedback(feedback.request_id, feedback.is_correct, feedback.actual_landmark)

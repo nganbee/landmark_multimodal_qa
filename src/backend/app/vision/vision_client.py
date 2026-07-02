@@ -68,6 +68,7 @@ USER QUERY
             )
             
             if response.status_code != 200:
+                print(f"[VisionClient Error] Server returned HTTP {response.status_code}: {response.text}")
                 return {
                     "landmark_name": "Unknown",
                     "reasoning_confidence": 0.0,
