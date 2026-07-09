@@ -27,17 +27,7 @@ Dự án tập trung giải quyết bài toán nhận diện và cung cấp thô
 - Khóa API của Groq, OpenWeather (có thể đăng ký miễn phí).
 
 ### Bước 1: Thiết lập biến môi trường
-Tạo file `.env` ở thư mục gốc của dự án (có thể copy từ file `.env.example`) và điền các khóa API của bạn:
-```ini
-DEVICE=cpu  # hoặc cuda nếu dùng GPU
-HF_TOKEN=your_huggingface_token
-HF_HOME=./hf_cache
-BASE_MODEL=Qwen/Qwen2.5-VL-3B-Instruct
-LORA_PATH=imbee510/qwen2-5-vl-landmark-lora
-OPENWEATHER_API_KEY=your_openweather_key
-GROQ_API_KEY=your_groq_key
-SUPABASE_URL=your_supabase_postgres_url
-```
+Tạo file `.env` ở thư mục gốc của dự án (theo file `.env.example`) và điền các khóa API
 
 ### Bước 2: Khởi chạy hệ thống
 
@@ -87,14 +77,21 @@ Lưu ý: Bạn cần mở **2 cửa sổ Terminal khác nhau** (đảm bảo c�
 
 ---
 
-## 4. Huấn luyện mô hình
+## 4. Dữ liệu & Huấn luyện mô hình
 
-Quá trình tinh chỉnh (Fine-tuning) mô hình nhận diện địa danh bằng kỹ thuật LoRA (trên nền Qwen2.5-VL) được thực hiện độc lập với ứng dụng chính. 
+### Dữ liệu (Dataset)
+Dự án sử dụng bộ dữ liệu được trích xuất và tinh chỉnh từ **[Google Landmarks Dataset v2 (GLDv2)](https://github.com/cvdfoundation/google-landmark)**. Đây là một trong những bộ dữ liệu quy mô lớn nhất thế giới dành cho bài toán nhận diện địa danh, chứa hàng triệu hình ảnh về các di tích, công trình kiến trúc và cảnh quan lịch sử trên toàn cầu.
 
-- **Dữ liệu & Notebook:** Toàn bộ mã nguồn để xử lý dữ liệu và huấn luyện được đặt tại `src/modeling/landmark-qwen2-5-vl-finetune.ipynb`.
+Nhóm đã thu thập, làm sạch và tổng hợp các dữ liệu phù hợp (đặc biệt tập trung vào các địa danh tại Việt Nam) thành một bộ dataset hoàn chỉnh trên Kaggle để phục vụ cho việc huấn luyện mô hình.
+- **Link Kaggle Dataset:** [Link Kaggle](<https://www.kaggle.com/datasets/kimngntrn510/vietnam-landmark-mqa-dataset>)
+
+### Quá trình Huấn luyện (Fine-tuning)
+Quá trình tinh chỉnh mô hình nhận diện địa danh bằng kỹ thuật LoRA (trên nền Qwen2.5-VL) được thực hiện độc lập với ứng dụng chính. 
+
+- **Mã nguồn (Notebook):** Toàn bộ mã nguồn để xử lý dữ liệu và huấn luyện được đặt tại `src/modeling/landmark-qwen2-5-vl-finetune.ipynb`.
 - **Cách chạy:** 
   1. Mở file notebook `landmark-qwen2-5-vl-finetune.ipynb` bằng Kaggle.
-  2. Chuẩn bị tập dữ liệu ảnh các địa danh.
+  2. Thêm tập dữ liệu ảnh các địa danh (dùng bộ dataset Kaggle đã tổng hợp ở trên) vào môi trường notebook.
   3. Chạy lần lượt các cell trong notebook để tiền xử lý, cấu hình tham số LoRA và tiến hành training. Trọng số sau khi train (LoRA adapter) sẽ được đẩy lên HuggingFace hoặc lưu ở thư mục cục bộ và cấu hình vào file `.env` thông qua biến `LORA_PATH`.
 
 ---
@@ -125,13 +122,9 @@ Sau khi hệ thống (Frontend và Backend) đã chạy thành công theo hướ
 
 ---
 
-## 7. Đạo đức và Trách nhiệm AI
+## 7 Video Demo
 
-Dự án tuân thủ các nguyên tắc đạo đức nghiêm ngặt:
-
-- **Chống thiên kiến:** Hiệu chỉnh mô hình để hoạt động chính xác trên cả phương ngữ vùng miền và các địa danh ở vùng sâu vùng xa.
-- **Bảo mật & Quyền riêng tư:** Tích hợp bộ lọc để từ chối xử lý hình ảnh nhạy cảm hoặc khu vực cấm.
-- **Ngăn chặn lạm dụng:** Thiết lập rào chắn để Agent từ chối các câu hỏi mang tính xuyên tạc lịch sử hoặc chính trị.
+[Video Demo](https://drive.google.com/file/d/1Ky7gwAT7FT6s53mLLk1HszAIGxs_BFKg/view?usp=sharing)
 
 ---
 
