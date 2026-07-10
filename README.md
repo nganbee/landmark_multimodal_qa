@@ -122,7 +122,21 @@ Sau khi hệ thống (Frontend và Backend) đã chạy thành công theo hướ
 
 ---
 
-## 7 Video Demo
+## 7. Phương pháp triển khai
+
+Hệ thống được thiết kế và đóng gói hoàn toàn bằng **Docker** (`docker-compose`), giúp dễ dàng triển khai (deploy) linh hoạt trên các máy chủ Cloud (như AWS EC2, Google Cloud VM, DigitalOcean) hoặc máy chủ On-premise.
+
+**Kiến trúc triển khai:**
+- **Backend (FastAPI):** Triển khai dưới dạng API service, chịu trách nhiệm xử lý logic, giao tiếp với LLM và ghi log vào Supabase. Chạy ở port `8000`.
+- **Frontend (Streamlit):** Triển khai dưới dạng Web App, cung cấp giao diện tương tác cho người dùng cuối. Kết nối với Backend thông qua Docker network. Chạy ở port `8501`.
+
+**Quy trình deploy cơ bản lên Server:**
+1. Kéo (clone) mã nguồn về server đích.
+2. Cấu hình file biến môi trường (`.env`).
+3. Chạy lệnh `docker-compose up -d --build` để hệ thống tự động build image và chạy nền các container.
+---
+
+## 8. Video Demo
 
 [Video Demo](https://drive.google.com/file/d/1Ky7gwAT7FT6s53mLLk1HszAIGxs_BFKg/view?usp=sharing)
 
